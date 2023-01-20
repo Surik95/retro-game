@@ -8,7 +8,6 @@ import Daemon from '../characters/Daemon';
 import GamePlay from '../GamePlay';
 import { characterGenerator, generateTeam } from '../generators';
 import Character from '../Character';
-import Team from '../Team';
 
 test('проверка функции characterGenerator', () => {
   const playerTypes = [Bowman, Swordsman, Magician];
@@ -27,17 +26,18 @@ test('проверка функции characterGenerator', () => {
 test('проверка функции generateTeam ', () => {
   const playerTypes = [Bowman, Swordsman, Magician];
   const team = generateTeam(playerTypes, 2, 5);
-  expect(team.character).toHaveLength(5);
-  expect(team.character[0].level <= 2).toBe(true);
-  expect(team.character[1].level <= 2).toBe(true);
-  expect(team.character[2].level <= 2).toBe(true);
-  expect(team.character[3].level <= 2).toBe(true);
-  expect(team.character[4].level <= 2).toBe(true);
+  expect(team).toHaveLength(5);
+  expect(team[0].level <= 2).toBe(true);
+  expect(team[1].level <= 2).toBe(true);
+  expect(team[2].level <= 2).toBe(true);
+  expect(team[3].level <= 2).toBe(true);
+  expect(team[4].level <= 2).toBe(true);
 });
 
-test('проверка функции drawPlayers', () => {
+test('проверка создания персонажей', () => {
   const gameCtrl = new GameController(new GamePlay());
-  expect(gameCtrl.drawPlayers()).toHaveLength(4);
+  gameCtrl.playerTeam.init();
+  expect(gameCtrl.playerTeam.position).toHaveLength(4);
 });
 
 test('создание экземпляра класса Character', () => {
@@ -48,9 +48,11 @@ test('создание экземляра класса Magician', () => {
   const result = new Magician(1);
   expect(result).toEqual({
     attack: 10,
+    attackRadius: 4,
     defence: 40,
     health: 50,
     level: 1,
+    stepRadius: 1,
     type: 'magician',
   });
 });

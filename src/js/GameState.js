@@ -13,7 +13,6 @@ export default class GameState {
   }
 
   from(object) {
-    debugger;
     this.levelCounter = object.levelCounter;
     this.moveCounter = object.moveCounter;
     this.activeCharacter = object.activeCharacter;
@@ -44,15 +43,19 @@ export default class GameState {
   }
 
   set bestScores(scores) {
+    // eslint-disable-next-line no-underscore-dangle
     if (scores > this._bestScores || !this._bestScores) {
+      // eslint-disable-next-line no-underscore-dangle
       this._bestScores = scores;
     }
   }
 
   get bestScores() {
+    // eslint-disable-next-line no-underscore-dangle
     if (!this._bestScores) {
       return 0;
     }
+    // eslint-disable-next-line no-underscore-dangle
     return this._bestScores;
   }
 }

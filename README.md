@@ -1,10 +1,10 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/aohj9yd44crlt3t3?svg=true)](https://ci.appveyor.com/project/Surik95/retro-game)
+[![Build status](https://ci.appveyor.com/api/projects/status/yxaitro8hhijqn9d?svg=true)](https://ci.appveyor.com/project/Surik95/retro-game)
 
 # Retro Game
 
 ## DEMO
 
-https://adeoz.github.io/RetroGame/
+https://Surik95.github.io/RetroGame/
 
 ## Содержание
 

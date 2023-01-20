@@ -1,5 +1,5 @@
 {
-  "name": "generators",
+  "name": "retro-game",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -30,12 +30,11 @@
     "html-loader": "^4.2.0",
     "html-webpack-plugin": "^5.5.0",
     "jest": "24.7.1",
-    "live-server": "^1.2.1",
     "mini-css-extract-plugin": "^2.6.1",
-    "style-loader": "^3.3.1",
     "webpack": "^5.74.0",
     "webpack-cli": "^4.10.0",
-    "webpack-dev-server": "^4.11.1"
+    "webpack-dev-server": "^4.11.1",
+    "live-server": "^1.2.1"
   },
   "dependencies": {
     "core-js": "^3.25.5"

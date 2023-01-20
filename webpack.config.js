@@ -30,7 +30,7 @@ module.exports = {
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
-        type: 'asset/resource',
+        type: 'asset/inline',
       },
     ],
   },
@@ -38,11 +38,6 @@ module.exports = {
     static: {
       directory: path.join(__dirname),
     },
-    // port: 9000,
-    // // hot: true,
-    // devMiddleware: {
-    //   writeToDisk: true,
-    // },
   },
   plugins: [
     new HtmlWebPackPlugin({

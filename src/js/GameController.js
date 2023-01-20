@@ -1,15 +1,8 @@
 import GamePlay from './GamePlay';
-import Bowman from './characters/Bowman';
-import Daemon from './characters/Daemon';
-import Magician from './characters/Magician';
-import Swordsman from './characters/Swordsman';
-import Undead from './characters/Undead';
-import Zombie from './characters/Zombie';
 import themes from './themes';
-import PositionedCharacter from './PositionedCharacter';
-import { generateTeam } from './generators';
 import GameState from './GameState';
 import AttackComputer from './atackComputer';
+import Team from './Team';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -18,20 +11,20 @@ export default class GameController {
     this.stateService = stateService;
     this.gameState = new GameState();
     this.boardSize = 8;
+    this.playerTeam = new Team();
   }
 
   init() {
     // TODO: add event listeners to gamePlay events
     // TODO: load saved stated from stateService
-
+    this.playerTeam.init();
+    this.gameState.positionPersonage = this.playerTeam.position;
     this.gamePlay.drawUi(this.backgroundTheme());
-    this.gamePlay.redrawPositions(this.drawPlayers());
-    this.reflectionInformationPersonage();
-    this.personageChoise();
+    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
+    this.gamePlay.addLoadGameListener(this.onLoadGameClick.bind(this));
     this.addListanier();
-    this.gamePlay.info('level', this.gameState.levelCounter);
-    this.gamePlay.info('score', this.gameState.scores);
-    this.gamePlay.info('best', this.gameState.bestScores);
+    this.renderStistPlayer();
   }
 
   onLoadGameClick() {
@@ -40,56 +33,44 @@ export default class GameController {
     }
     try {
       this.gameState.from(this.stateService.load());
+      this.playerTeam.position = this.gameState.positionPersonage;
     } catch (e) {
       GamePlay.showError(e.message);
     }
     this.gamePlay.drawUi(this.backgroundTheme());
-    this.gamePlay.redrawPositions(this.gameState.positionPersonage);
-    this.gamePlay.info('level', this.gameState.levelCounter);
-    this.gamePlay.info('score', this.gameState.scores);
-    this.gamePlay.info('best', this.gameState.bestScores);
+    this.renderStistPlayer();
   }
 
   addListanier() {
     this.gamePlay.addSaveGameListener(() => {
       this.stateService.save(this.gameState.to());
+      // eslint-disable-next-line no-alert
       alert('Игра сохранена!');
     });
-
-    this.gamePlay.addLoadGameListener(this.onLoadGameClick.bind(this));
-
     this.gamePlay.addNewGameListener(() => {
       if (this.gameState.scores > this.gameState.bestScores) {
         this.gameState.bestScores = this.gameState.scores;
       }
-      this.gameState.levelCounter = 1;
-      this.gameState.moveCounter = 1;
-      this.gameState.activeCharacter = null;
-      this.gameState.positionPersonage = null;
-      this.gameState.walkingDistancesActivePersonage = [];
-      this.gameState.attackDistancesActivePersonage = [];
-      this.gameState.arrRipCharacterPlayer = [];
-      this.gameState.scores = 0;
+      this.playerTeam.init();
+      this.gameStateChange({
+        levelCounter: 1,
+        moveCounter: 1,
+        activeCharacter: null,
+        walkingDistancesActivePersonage: [],
+        attackDistancesActivePersonage: [],
+        arrRipCharacterPlayer: [],
+        scores: 0,
+        positionPersonage: this.playerTeam.position,
+        gameOver: false,
+      });
 
       this.gamePlay.drawUi(this.backgroundTheme());
-      this.gamePlay.redrawPositions(this.drawPlayers());
-
-      this.gamePlay.info('level', this.gameState.levelCounter);
-      this.gamePlay.info('score', this.gameState.scores);
-      this.gamePlay.info('best', this.gameState.bestScores);
+      this.renderStistPlayer();
     });
   }
 
   backgroundTheme() {
     return themes[(this.gameState.levelCounter - 1) % themes.length];
-  }
-
-  reflectionInformationPersonage() {
-    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
-  }
-
-  personageChoise() {
-    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
   }
 
   onCellClick(index) {
@@ -98,7 +79,9 @@ export default class GameController {
       return;
     }
     if (this.gameState.moveCounter % 2 === 1) {
-      this.personageVerification(index);
+      this.characterRendring(index, 'player');
+    } else if (this.gameState.moveCounter % 2 === 0) {
+      this.characterRendring(index, 'computer');
     }
   }
 
@@ -114,55 +97,9 @@ export default class GameController {
     }
   }
 
-  onCellLeave(index) {
-    // TODO: react to mouse leave
-  }
-
-  drawPlayers() {
-    this.playerCharacters = generateTeam([Bowman, Magician, Swordsman], 1, 2);
-    this.computerCharacters = generateTeam([Daemon, Undead, Zombie], 1, 2);
-
-    this.gameState.positionPersonage = [
-      ...this.positionDetermination(this.playerCharacters, 'player'),
-      ...this.positionDetermination(this.computerCharacters, 'computer'),
-    ];
-    console.log(this.gameState.positionPersonage);
-    return this.gameState.positionPersonage;
-  }
-
-  positionDetermination(teamArr, player) {
-    let positionOnBoard;
-    const arrPosition = [];
-    const position = [];
-    this.gameState.gameBoard = new Array(this.boardSize * this.boardSize);
-
-    for (let i = 0; i < this.gameState.gameBoard.length; i += 1) {
-      this.gameState.gameBoard[i] = i;
-    }
-
-    if (player === 'player') {
-      positionOnBoard = this.gameState.gameBoard.filter(
-        (item) => item % this.boardSize < 2,
-      );
-    } else {
-      positionOnBoard = this.gameState.gameBoard.filter(
-        (item) => item % this.boardSize >= this.boardSize - 2,
-      );
-    }
-    while (position.length < teamArr.character.length) {
-      const cell = positionOnBoard[[Math.trunc(Math.random() * positionOnBoard.length)]];
-      if (!position.includes(cell)) {
-        position.push(cell);
-      }
-    }
-    debugger;
-    for (let i = 0; i < teamArr.character.length; i += 1) {
-      arrPosition.push(
-        new PositionedCharacter(teamArr.character[i], position[i]),
-      );
-    }
-    return arrPosition;
-  }
+  // onCellLeave(index) {
+  //   // TODO: react to mouse leave
+  // }
 
   addMessage(index) {
     const personageInCell = this.gameState.positionPersonage.find(
@@ -174,17 +111,7 @@ export default class GameController {
     }
   }
 
-  // проверка наличия персонажа и определение хода команды
-  personageVerification(index) {
-    // проверка персонажа в выбранной клетке
-    if (this.gameState.moveCounter % 2 === 1) {
-      this.characterRendring(index, 'player');
-    } else if (this.gameState.moveCounter % 2 === 0) {
-      this.characterRendring(index, 'computer');
-    }
-  }
-
-  characterRendring(index, user) {
+  async characterRendring(index, user) {
     const activeCellYellow = [...this.gamePlay.cells].findIndex((items) => items.classList.contains('selected-yellow'));
     const activeCellGreen = [...this.gamePlay.cells].findIndex((items) => items.classList.contains('selected-green'));
     const activeCellRed = [...this.gamePlay.cells].findIndex((items) => items.classList.contains('selected-red'));
@@ -206,19 +133,19 @@ export default class GameController {
       this.gameState.activeCharacter = personageActive;
 
       this.gamePlay.selectCell(index);
-      this.gameState.walkingDistancesActivePersonage = this.displacement(
-        this.gameState.activeCharacter.character.type,
+      this.gameState.walkingDistancesActivePersonage = this.distaceStep(
         this.gameState.activeCharacter.position,
+        this.gameState.activeCharacter.character.stepRadius,
       );
-      this.gameState.attackDistancesActivePersonage = this.attackDistance(
-        this.gameState.activeCharacter.character.type,
+      this.gameState.attackDistancesActivePersonage = this.distaceAtack(
         this.gameState.activeCharacter.position,
+        this.gameState.activeCharacter.character.attackRadius,
       );
     } else if (
       this.gameState.attackDistancesActivePersonage.includes(index)
       && defending.includes(index)
     ) {
-      this.attackMacking(this.gameState.activeCharacter, index);
+      await this.attackMacking(this.gameState.activeCharacter, index);
       if (
         this.gameState.positionPersonage.find(
           (item) => item.character.health <= 0,
@@ -235,10 +162,12 @@ export default class GameController {
           this.gameState.arrRipCharacterPlayer.push(pers[0]);
         }
       }
-      this.gameState.moveCounter += 1;
-      this.gameState.attackDistancesActivePersonage = [];
-      this.gameState.walkingDistancesActivePersonage = [];
-      this.gameState.activeCharacter = null;
+      this.gameStateChange({
+        moveCounter: this.gameState.moveCounter + 1,
+        walkingDistancesActivePersonage: [],
+        attackDistancesActivePersonage: [],
+        activeCharacter: null,
+      });
       if (activeCellRed === -1) {
         this.gamePlay.deselectCell(activeCellRed);
       }
@@ -246,15 +175,34 @@ export default class GameController {
         if (
           this.gameState.positionPersonage.filter((item) => ['daemon', 'undead', 'zombie'].includes(item.character.type)).length === 0
         ) {
-          this.gameState.levelCounter += 1;
+          this.gameStateChange({
+            levelCounter: this.gameState.levelCounter + 1,
+          });
           if (this.gameState.levelCounter > 4) {
             if (this.gameState.scores > this.gameState.bestScores) {
               this.gameState.bestScores = this.gameState.scores;
             }
-            this.gameState.gameOver = true;
+            this.gameStateChange({
+              gameOver: true,
+            });
+            // eslint-disable-next-line no-alert
+            alert('Вы победили');
             return;
           }
-          this.levelUp();
+          this.gameStateChange({
+            moveCounter: 1,
+            scores: this.gameState.positionPersonage.reduce(
+              (acc, item) => acc + item.character.health,
+              this.gameState.scores,
+            ),
+          });
+          this.gamePlay.drawUi(this.backgroundTheme());
+          this.playerTeam.levelUp(
+            this.gameState.arrRipCharacterPlayer,
+            this.gameState.levelCounter,
+          );
+          this.gameState.positionPersonage = this.playerTeam.position;
+          this.renderStistPlayer();
         } else {
           this.computerStep();
         }
@@ -272,6 +220,7 @@ export default class GameController {
           this.gamePlay.deselectCell(activeCellRed);
         }
         this.gameState.gameOver = true;
+        // eslint-disable-next-line no-alert
         alert('Вы проиграли');
         return;
       }
@@ -287,17 +236,21 @@ export default class GameController {
       if (activeCellYellow !== 1) {
         this.gamePlay.deselectCell(activeCellYellow);
       }
-      this.gameState.moveCounter += 1;
-      this.gameState.attackDistancesActivePersonage = [];
-      this.gameState.walkingDistancesActivePersonage = [];
-      this.gameState.activeCharacter = null;
+      this.gameStateChange({
+        moveCounter: this.gameState.moveCounter + 1,
+        attackDistancesActivePersonage: [],
+        walkingDistancesActivePersonage: [],
+        activeCharacter: null,
+      });
       if (user === 'player') {
         this.computerStep();
       }
     } else {
-      this.gameState.attackDistancesActivePersonage = [];
-      this.gameState.walkingDistancesActivePersonage = [];
-      this.gameState.activeCharacter = null;
+      this.gameStateChange({
+        attackDistancesActivePersonage: [],
+        walkingDistancesActivePersonage: [],
+        activeCharacter: null,
+      });
       GamePlay.showError('Выбор недоступен');
     }
     if (activeCellYellow !== -1) {
@@ -364,30 +317,6 @@ export default class GameController {
           this.gamePlay.selectCell(index, 'green');
         }
       }
-    }
-  }
-
-  // определение дистанции хода
-  displacement(type, index) {
-    switch (true) {
-      case ['bowman', 'zombie'].includes(type):
-        return this.distaceStep(index, 2);
-      case ['magician', 'daemon'].includes(type):
-        return this.distaceStep(index, 1);
-      default:
-        return this.distaceStep(index, 4);
-    }
-  }
-
-  // определение дистанции атаки
-  attackDistance(type, index) {
-    switch (true) {
-      case ['bowman', 'zombie'].includes(type):
-        return this.distaceAtack(index, 2);
-      case ['magician', 'daemon'].includes(type):
-        return this.distaceAtack(index, 4);
-      default:
-        return this.distaceAtack(index, 1);
     }
   }
 
@@ -492,33 +421,18 @@ export default class GameController {
       ) / 10,
     );
 
-    target.character.health -= damage;
-
     await this.gamePlay.showDamage(index, damage);
+    target.character.health -= damage;
     this.gamePlay.redrawPositions(this.gameState.positionPersonage);
   }
 
   computerStep() {
     for (const item of this.gameState.positionPersonage) {
       if (['daemon', 'undead', 'zombie'].includes(item.character.type)) {
-        const arr1 = this.attackDistance(item.character.type, item.position);
+        const arr1 = this.distaceAtack(item.position, item.character.attackRadius);
         item.attackCells = [...arr1];
-        const arr2 = this.displacement(item.character.type, item.position);
+        const arr2 = this.distaceStep(item.position, item.character.stepRadius);
         item.stepCells = [...arr2];
-        switch (true) {
-          case 'zombie'.includes(item.character.type):
-            item.character.attackRadius = 2;
-            item.character.stepRadius = 2;
-            break;
-          case 'daemon'.includes(item.character.type):
-            item.character.attackRadius = 4;
-            item.character.stepRadius = 1;
-            break;
-          default:
-            item.character.attackRadius = 1;
-            item.character.stepRadius = 4;
-            break;
-        }
       }
     }
 
@@ -550,66 +464,18 @@ export default class GameController {
     }
   }
 
-  levelUp() {
-    debugger;
-    this.gameState.moveCounter = 1;
-    this.gameState.scores = this.gameState.positionPersonage.reduce(
-      (acc, item) => acc + item.character.health,
-      this.gameState.scores,
-    );
-    this.gameState.positionPersonage.forEach((item) => {
-      item.character.level += 1;
-      item.character.attack = Math.ceil(
-        Math.max(
-          item.character.attack,
-          (item.character.attack * (80 + item.character.health)) / 10,
-        ),
-      ) / 10;
-      this.defence = Math.ceil(
-        Math.max(
-          item.character.defence,
-          (item.character.defence * (80 + item.character.health)) / 10,
-        ),
-      ) / 10;
-      item.character.health = item.character.health + 80 > 100 ? 100 : item.character.health + 80;
-    });
-
-    this.gamePlay.drawUi(this.backgroundTheme());
-    const playerCharacters = {
-      character: [],
-    };
-    if (this.gameState.arrRipCharacterPlayer.length > 0) {
-      for (let i = 0; i < this.gameState.arrRipCharacterPlayer.length; i += 1) {
-        this.gameState.arrRipCharacterPlayer[i].character.health = 50;
-        const ripCharacter = this.gameState.arrRipCharacterPlayer[i];
-        playerCharacters.character.push(ripCharacter.character);
-      }
-    }
-    for (const item of this.gameState.positionPersonage) {
-      playerCharacters.character.push(item.character);
-    }
-
-    if (playerCharacters.character.length < this.gameState.levelCounter) {
-      const newCharacter = generateTeam(
-        [Bowman, Magician, Swordsman],
-        1,
-        this.gameState.levelCounter - playerCharacters.character.length,
-      );
-      playerCharacters.character.push(...newCharacter.character);
-    }
-    this.gameState.positionPersonage = [
-      ...this.positionDetermination(playerCharacters, 'player'),
-      ...this.positionDetermination(
-        generateTeam(
-          [Daemon, Undead, Zombie],
-          this.gameState.levelCounter,
-          this.gameState.levelCounter,
-        ),
-        'computer',
-      ),
-    ];
+  renderStistPlayer(best = true) {
     this.gamePlay.redrawPositions(this.gameState.positionPersonage);
     this.gamePlay.info('level', this.gameState.levelCounter);
     this.gamePlay.info('score', this.gameState.scores);
+    if (best) this.gamePlay.info('best', this.gameState.bestScores);
+  }
+
+  gameStateChange(obj) {
+    for (const key in obj) {
+      if (key in this.gameState) {
+        this.gameState[key] = obj[key];
+      }
+    }
   }
 }

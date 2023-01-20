@@ -194,10 +194,12 @@ export default class GamePlay {
   }
 
   static showError(message) {
+    // eslint-disable-next-line no-alert
     alert(message);
   }
 
   static showMessage(message) {
+    // eslint-disable-next-line no-alert
     alert(message);
   }
 
@@ -208,9 +210,11 @@ export default class GamePlay {
 
   deselectCell(index) {
     const cell = this.cells[index];
-    cell.classList.remove(
-      ...Array.from(cell.classList).filter((o) => o.startsWith('selected')),
-    );
+    if (cell.classList) {
+      cell.classList.remove(
+        ...Array.from(cell.classList).filter((o) => o.startsWith('selected')),
+      );
+    }
   }
 
   showCellTooltip(message, index) {
